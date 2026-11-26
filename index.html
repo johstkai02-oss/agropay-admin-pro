@@ -41,7 +41,7 @@ button{width:100%;background:#10b981;color:#000;border:none;padding:10px;border-
 <b>2. COBRAR Y LIQUIDAR AUDITORÍAS</b>
 <button style="background:#0284c7;color:#fff" onclick="escanearQR()">ESCANEAR QR (PAGO O RECARGA)</button>
 <video id="cam" autoplay playsinline muted></video>
-<button style="background:#0284c7;color:#fff" onclick="exportarAuditoria()">EXPORTAR REPORTE TRAZABLE</button>
+<button style="background:#0284c7;color:#fff" onclick="exportarAuditoria()">EXPORTAR REPORTE TRAZABLE</button><button style="background:#065f46;color:#fff" onclick="respaldoSeguro()">RESPALDO BÓVEDA CIFRADA</button><button style="background:#065f46;color:#fff" onclick="respaldoSeguro()">RESPALDO BÓVEDA CIFRADA</button>
 <div id="lista" style="margin-top:6px"></div>
 </div>
 
@@ -84,7 +84,7 @@ boveda.saldo-=m;boveda.usados.push(tx);boveda.movs.unshift(`ENVÍO -$${m.toFixed
 const box=document.getElementById("qr-box");box.innerHTML="";box.style.display="flex";new QRCode(box,{text:vale,width:190,height:190});
 }
 async function emitirRecarga(){
-if(document.getElementById("clave-adm").value!=="ADMIN2026")return alert("Clave Maestra incorrecta");
+const hAdm=await firmar(document.getElementById("clave-adm").value);if(hAdm!=="3D219E0A4C8B1F")return alert("Clave Maestra inválida");
 const m=parseFloat(document.getElementById("monto-rec").value);if(!m||m<=0)return alert("Ingresa monto recibido");
 const tx="RC"+Date.now().toString(36).toUpperCase(),vale=JSON.stringify({tipo:"RECARGA",tx,de:"CAJA_CENTRAL",m,c:"Recarga Efectivo",s:await firmar(`${tx}|CAJA_CENTRAL|${m}`)});
 const box=document.getElementById("qr-box");box.innerHTML="";box.style.display="flex";new QRCode(box,{text:vale,width:190,height:190});
@@ -113,4 +113,4 @@ r.onload=e=>{const d=JSON.parse(e.target.result),com=(d.saldo*0.015).toFixed(2),
 document.getElementById("res-liq").innerText=`Comercio: ${d.comercio} (${d.id}) | Bruto: $${d.saldo.toFixed(2)} | Comisión 1.5%: $${com} | A pagar: $${neto}`;};
 r.readAsText(f);
 }
-</script></body></html>
+</script><script src="antifraude.js"></script></body></html>
