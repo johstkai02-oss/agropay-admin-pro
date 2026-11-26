@@ -1,4 +1,4 @@
-const WHATSAPP_SOPORTE = "593999999999";
+const WHATSAPP_SOPORTE = "593996348376";
 
 const docsComerciales = {
     contrato: `<h3>CONTRATO DE ADHESIÓN COMERCIAL</h3>

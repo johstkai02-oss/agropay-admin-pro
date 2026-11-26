@@ -60,3 +60,16 @@ function respaldoSeguro() {
     a.href = URL.createObjectURL(new Blob([raw], { type: "application/json" }));
     a.download = `Respaldo_AES256_${Date.now()}.json`; a.click();
 }
+function restaurarBoveda(ev) {
+    const f = ev.target.files; if (!f) return;
+    const r = new FileReader();
+    r.onload = e => {
+        try {
+            const d = JSON.parse(e.target.result);
+            if (!d.iv || !d.data) return alert("Archivo de respaldo inválido.");
+            localStorage.setItem("agropay_pro", JSON.stringify(d));
+            alert("¡Bóveda restaurada! Ahora ingresa tu PIN y toca DESBLOQUEAR BÓVEDA.");
+        } catch (err) { alert("Error al leer el archivo de respaldo."); }
+    };
+    r.readAsText(f);
+}
