@@ -1,34 +1,119 @@
 <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>AgroPay - Caja Central</title><script src="qr_gen.js"></script>
+<title>AgroPay // Central Ejecutiva</title><script src="qr_gen.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,sans-serif}
-body{background:#120905;color:#fed7aa;padding:14px}
-.card{background:#231109;border:1px solid #f97316;border-radius:12px;padding:14px;margin-bottom:12px}
-input{width:100%;background:#120905;border:1px solid #ea580c;color:#fff;padding:10px;border-radius:8px;margin-top:8px}
-button{width:100%;background:#f97316;color:#000;border:none;padding:11px;border-radius:8px;font-weight:bold;margin-top:10px}
+body{background:#120905;color:#fed7aa;padding:12px}
+.card{background:#231109;border:1px solid #f97316;border-radius:12px;padding:12px;margin-bottom:10px}
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;text-align:center}
+.kpi div{background:#120905;padding:8px;border-radius:8px;border:1px solid #9a3412}
+input,select{width:100%;background:#120905;border:1px solid #ea580c;color:#fff;padding:9px;border-radius:8px;margin-top:6px;font-size:13px}
+button{width:100%;background:#f97316;color:#000;border:none;padding:10px;border-radius:8px;font-weight:bold;margin-top:8px;font-size:12px}
+.btn-v{background:#10b981;color:#000}.btn-r{background:#7f1d1d;color:#fecaca;border:1px solid #ef4444}
 #qr-box{background:#fff;padding:12px;border-radius:8px;margin-top:10px;display:none;justify-content:center}
+.log{font-size:11px;padding:4px 0;border-bottom:1px solid #431407;color:#fdba74}
 </style></head>
 <body>
-<div class="card"><b>CAJA CENTRAL // EMITIR RECARGA OFICIAL</b>
-<input type="password" id="clave" placeholder="Clave Maestra (ej. ADMIN2026)">
-<input type="number" id="monto" placeholder="Efectivo recibido USD (ej. 50)">
-<button onclick="emitir()">GENERAR QR DE RECARGA</button><div id="qr-box"></div></div>
-<div class="card"><b>LIQUIDAR REPORTE DE COMERCIO (.JSON)</b>
+<div class="card">
+<b style="color:#fb923c">CENTRAL EJECUTIVA // PUYO - PASTAZA</b>
+<div class="kpi">
+<div><span style="font-size:10px">EFECTIVO RECAUDADO</span><br><b id="k-rec" style="font-size:16px;color:#34d399">$0.00</b></div>
+<div><span style="font-size:10px">GANANCIA COMISIÓN (1.5%)</span><br><b id="k-com" style="font-size:16px;color:#fbbf24">$0.00</b></div>
+</div>
+<input type="password" id="clave" placeholder="Clave Maestra de Caja (Hash SHA-256)">
+</div>
+
+<div class="card">
+<b>1. EMITIR RECARGA OFICIAL (TTL 2 MINUTOS)</b>
+<input type="text" id="cliente-rec" placeholder="Nombre del Productor / Cliente">
+<input type="number" id="monto" placeholder="Efectivo físico recibido USD (ej. 50)">
+<button onclick="emitir()">GENERAR QR DE RECARGA BLINDADO</button>
+<div id="qr-box"></div>
+</div>
+
+<div class="card">
+<b>2. LIQUIDAR COMERCIO (.JSON) Y COMPROBANTE</b>
 <input type="file" accept=".json" onchange="liquidar(event)">
-<div id="res" style="margin-top:8px;font-size:13px">Sube el archivo enviado por el afiliado.</div></div>
+<div id="res" style="margin-top:8px;font-size:12px;line-height:1.5">Sube el archivo enviado por el afiliado.</div>
+<button id="btn-ws" class="btn-v" style="display:none" onclick="enviarReciboWS()">ENVIAR COMPROBANTE POR WHATSAPP</button>
+</div>
+<div class="card">
+<b>3. CONTABILIDAD, ANULACIONES Y CIERRE</b>
+<div style="display:flex;gap:6px">
+<button class="btn-v" onclick="exportarCSV()">EXPORTAR EXCEL (.CSV)</button>
+<button class="btn-r" onclick="anularUltimo()">ANULAR ÚLTIMO ASIENTO</button>
+</div>
+<div id="historial-adm" style="margin-top:8px"></div>
+</div>
 <script>
-async function firmar(t){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t+"|SELLO_CENTRAL"));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,14).toUpperCase();}
-async function emitir(){
-if(document.getElementById("clave").value!=="ADMIN2026")return alert("Clave incorrecta");
-const m=parseFloat(document.getElementById("monto").value);if(!m||m<=0)return alert("Monto inválido");
-const tx="RC"+Date.now().toString(36).toUpperCase(),vale=JSON.stringify({tipo:"RECARGA",tx,de:"CAJA_CENTRAL",m,c:"Recarga Efectivo",s:await firmar(`${tx}|CAJA_CENTRAL|${m}`)});
-const box=document.getElementById("qr-box");box.innerHTML="";box.style.display="flex";new QRCode(box,{text:vale,width:200,height:200});
+const HASH_MAESTRO = "8D969EEF6ECAD3C29A3A629280E686CF0C3F5D5A86AFF3CA12020C923ADC6C92"; // Hash SHA-256 de "123456"
+let libro = JSON.parse(localStorage.getItem("central_libro_agro") || "[]");
+let ultimoReciboTexto = "";
+
+async function sha256(t) {
+    const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t));
+    return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, "0")).join("").toUpperCase();
 }
-function liquidar(ev){
-const f=ev.target.files;if(!f)return;const r=new FileReader();
-r.onload=e=>{const d=JSON.parse(e.target.result),com=(d.saldo*0.015).toFixed(2),neto=(d.saldo-com).toFixed(2);
-document.getElementById("res").innerText=`Comercio: ${d.comercio} (${d.id}) | Bruto: $${d.saldo.toFixed(2)} | Comisión 1.5%: $${com} | Entregar efectivo: $${neto}`;};
-r.readAsText(f);
+async function firmar(t) { return (await sha256(t + "|SELLO_CENTRAL")).slice(0, 14); }
+
+async function validarClave() {
+    if (await sha256(document.getElementById("clave").value) !== HASH_MAESTRO) { alert("Clave Maestra rechazada."); return false; }
+    return true;
 }
+
+async function emitir() {
+    if (!(await validarClave())) return;
+    const m = parseFloat(document.getElementById("monto").value);
+    const cli = document.getElementById("cliente-rec").value || "Cliente Rural";
+    if (!m || m <= 0 || m > 1000) return alert("Monto inválido (Max $1,000 USD).");
+    const tx = "RC" + Date.now().toString(36).toUpperCase(), exp = Date.now() + 120000;
+    const vale = JSON.stringify({ tipo: "RECARGA", tx, de: "CAJA_CENTRAL", m, c: `Recarga ${cli}`, exp, s: await firmar(`${tx}|CAJA_CENTRAL|${m}|${exp}`) });
+    const box = document.getElementById("qr-box"); box.innerHTML = ""; box.style.display = "flex";
+    new QRCode(box, { text: vale, width: 200, height: 200 });
+    libro.unshift({ fecha: new Date().toLocaleString(), tipo: "RECARGA", detalle: cli, bruto: m, com: 0, neto: m });
+    guardarLibro();
+}
+async function liquidar(ev) {
+    if (!(await validarClave())) return;
+    const f = ev.target.files; if (!f) return; const r = new FileReader();
+    r.onload = e => {
+        const d = JSON.parse(e.target.result);
+        const pagados = JSON.parse(localStorage.getItem("central_pagados") || "[]");
+        const huella = `${d.id}_${d.saldo}_${(d.movs||[]).length}`;
+        if (pagados.includes(huella)) return alert("FRAUDE BLOQUEADO: Este reporte ya fue liquidado anteriormente.");
+        const com = +(d.saldo * 0.015).toFixed(2), neto = +(d.saldo - com).toFixed(2);
+        pagados.push(huella); localStorage.setItem("central_pagados", JSON.stringify(pagados));
+        libro.unshift({ fecha: new Date().toLocaleString(), tipo: "LIQUIDACION", detalle: `${d.comercio} (${d.id})`, bruto: d.saldo, com, neto });
+        guardarLibro();
+        document.getElementById("res").innerHTML = `✅ <b>LIQUIDACIÓN APROBADA</b><br>Comercio: ${d.comercio} (${d.id})<br>Bruto: $${d.saldo.toFixed(2)} | Comisión (1.5%): <b>$${com.toFixed(2)}</b><br><b>TRANSFERIR AL COMERCIO: $${neto.toFixed(2)} USD</b>`;
+        ultimoReciboTexto = `COMPROBANTE LIQUIDACIÓN AGROPAY:%0A• Comercio: ${d.comercio} (${d.id})%0A• Bruto: $${d.saldo.toFixed(2)}%0A• Comisión 1.5%: -$${com.toFixed(2)}%0A• NETO TRANSFERIDO: $${neto.toFixed(2)} USD`;
+        document.getElementById("btn-ws").style.display = "block";
+    };
+    r.readAsText(f);
+}
+
+function enviarReciboWS() { window.open(`https://wa.me{ultimoReciboTexto}`, '_blank'); }
+
+async function anularUltimo() {
+    if (!(await validarClave()) || !libro.length) return;
+    const u = libro;
+    libro.unshift({ fecha: new Date().toLocaleString(), tipo: "ANULACION", detalle: `Reverso ${u.detalle}`, bruto: -u.bruto, com: -u.com, neto: -u.neto });
+    guardarLibro(); alert("Último asiento reversado contablemente.");
+}
+
+function exportarCSV() {
+    let csv = "Fecha,Tipo,Detalle,Bruto_USD,Comision_USD,Neto_USD\n" + libro.map(x => `"${x.fecha}",${x.tipo},"${x.detalle}",${x.bruto},${x.com},${x.neto}`).join("\n");
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = `Libro_Central_AgroPay_${Date.now()}.csv`; a.click();
+}
+
+function guardarLibro() { localStorage.setItem("central_libro_agro", JSON.stringify(libro)); render(); }
+function render() {
+    const rec = libro.filter(x => x.tipo === "RECARGA" || (x.tipo === "ANULACION" && x.com === 0)).reduce((a, b) => a + b.bruto, 0);
+    const com = libro.reduce((a, b) => a + b.com, 0);
+    document.getElementById("k-rec").innerText = `$${rec.toFixed(2)}`;
+    document.getElementById("k-com").innerText = `$${com.toFixed(2)}`;
+    document.getElementById("historial-adm").innerHTML = libro.slice(0, 6).map(x => `<div class="log">[${x.tipo}] ${x.detalle}: $${x.bruto.toFixed(2)} (Com: $${x.com.toFixed(2)})</div>`).join("");
+}
+render();
 </script></body></html>
