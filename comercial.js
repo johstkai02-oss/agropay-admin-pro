@@ -29,21 +29,6 @@ function filtrarDirectorio() {
       <div style="font-size:10.5px;color:#a7f3d0;margin-top:3px">✓ ${p.serv}</div>
     </div>`).join('') : '<div style="font-size:11px;color:#94a3b8;text-align:center;padding:12px">No se encontraron comercios con ese filtro.</div>';
 }
-const docsComerciales = {
-  directorio: `<h3>DIRECTORIO RED COMERCIAL PASTAZA</h3>
-    <p style="font-size:11px;margin-bottom:6px;color:#a7f3d0">Puntos oficiales donde puedes pagar, cobrar o recargar sin internet:</p>
-    <div style="display:flex;gap:5px;margin-bottom:6px">
-      <input type="text" id="dir-busq" onkeyup="filtrarDirectorio()" placeholder="Buscar cacao, pasaje, Puyo..." style="margin:0;padding:8px;font-size:11px;flex:1">
-      <select id="dir-zona" onchange="filtrarDirectorio()" style="background:#06100c;border:1px solid #059669;color:#fff;padding:8px;border-radius:8px;font-size:11px">
-        <option value="TODOS">Todas las zonas</option>
-        <option value="Puyo">Puyo Centro</option>
-        <option value="Shell / Mera">Shell / Mera</option>
-        <option value="Tarqui / Acopio">Tarqui / Acopio</option>
-        <option value="Santa Clara / Arajuno">Santa Clara / Arajuno</option>
-      </select>
-    </div>
-    <div id="dir-lista" style="max-height:48vh;overflow-y:auto;padding-right:3px"></div>
-    <button onclick="verComercial('afiliacion')" style="background:#10b981;color:#000;margin-top:8px">REGISTRAR MI NEGOCIO EN EL DIRECTORIO</button>`,
   contrato: `<h3>CONTRATO MARCO DE ADHESIÓN COMERCIAL</h3>
     <div style="max-height:52vh;overflow-y:auto;padding-right:4px;font-size:11px;line-height:1.5;color:#d1fae5">
       <p style="margin-bottom:6px"><b>CLÁUSULA 1. OBJETO Y CIRCUITO CERRADO:</b> El presente acuerdo vincula al Comercio, Finca o Transportista ("EL AFILIADO") a la red tecnológica <b>AgroPay Pastaza</b>, habilitándolo para recibir pagos digitales mediante vales QR criptográficos offline respaldados 1:1 en dólares de los Estados Unidos (USD).</p>
