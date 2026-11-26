@@ -68,10 +68,37 @@ const barraCampus = document.createElement('div');
 barraCampus.style.cssText = "margin-top:6px;display:flex;gap:5px";
 barraCampus.innerHTML = `
 <button onclick="verCampus('biblioteca')" style="background:#064e3b;color:#a7f3d0;padding:8px;font-size:11px">Libros / Folletos</button>
-<button onclick="verCampus('masteres')" style="background:#78350f;color:#fde68a;padding:8px;font-size:11px">Másteres / Matrícula</button>`;
+<button onclick="verCampus('masteres')" style="background:#78350f;color:#fde68a;padding:8px;font-size:11px">Másteres / Matrícula</button><button onclick="verCampus(x27validarx27)" style="background:#0284c7;color:#fff;padding:8px;font-size:11px">Validar Título</button>`;
 document.body.insertBefore(barraCampus, document.querySelector('.footer-legal'));
 
 function verCampus(tipo) {
     document.getElementById('contenido-legal').innerHTML = catalogoCampus[tipo];
     document.getElementById('modal-legal').style.display = 'block';
+}
+catalogoCampus.validar = `<h3>VALIDADOR NATIVO DE CERTIFICADOS</h3>
+<p style="font-size:11px;margin-bottom:6px">Verifica la autenticidad criptográfica SHA-256 de cualquier diploma AgroPay sin internet:</p>
+<input type="text" id="val-ci" placeholder="Cédula del Titular (ej. 1600123456)">
+<select id="val-prog" style="width:100%;background:#06100c;border:1px solid #059669;color:#fff;padding:9px;border-radius:8px;margin-top:6px">
+    <option value="Máster FinTech Rural ($25.00)">Máster FinTech Rural ($25.00)</option>
+    <option value="Máster Agronegocios Amazónicos ($35.00)">Máster Agronegocios Amazónicos ($35.00)</option>
+</select>
+<input type="text" id="val-cod" placeholder="Código del Certificado (ej. CERT-XXXXX-SELLO)">
+<button onclick="comprobarCertificado()" style="background:#0284c7;color:#fff;margin-top:8px">VERIFICAR AUTENTICIDAD</button>
+<div id="val-res" style="margin-top:10px;font-size:12px"></div>`;
+
+async function comprobarCertificado() {
+    const ci = document.getElementById('val-ci').value.trim();
+    const prog = document.getElementById('val-prog').value;
+    const completo = document.getElementById('val-cod').value.trim().toUpperCase();
+    const res = document.getElementById('val-res');
+    if (!ci || !completo.includes('-')) return alert("Ingresa la cédula y el código completo (CERT-XXXX-SELLO).");
+    const partes = completo.split('-');
+    const cod = partes + '-' + partes;
+    const selloIngresado = partes;
+    const selloReal = await firmar(`${cod}|${ci}|${prog}`);
+    if (selloIngresado === selloReal) {
+        res.innerHTML = `<div style="padding:10px;background:#064e3b;border:1px solid #10b981;border-radius:8px;color:#34d399"><b>✅ CERTIFICADO AUTÉNTICO VERIFICADO</b><br>Titular CI: ${ci}<br>Programa: ${prog}<br>Firma SHA-256 válida.</div>`;
+    } else {
+        res.innerHTML = `<div style="padding:10px;background:#450a0a;border:1px solid #ef4444;border-radius:8px;color:#fca5a5"><b>❌ ALERTA: CERTIFICADO INVÁLIDO O ADULTERADO</b><br>La firma criptográfica no coincide con los registros oficiales.</div>`;
+    }
 }
