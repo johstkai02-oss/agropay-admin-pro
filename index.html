@@ -113,4 +113,4 @@ r.onload=e=>{const d=JSON.parse(e.target.result),com=(d.saldo*0.015).toFixed(2),
 document.getElementById("res-liq").innerText=`Comercio: ${d.comercio} (${d.id}) | Bruto: $${d.saldo.toFixed(2)} | Comisión 1.5%: $${com} | A pagar: $${neto}`;};
 r.readAsText(f);
 }
-</script><script src="antifraude.js"></script><script src="legal.js"></script></body></html>
+</script><script src="antifraude.js"></script><script src="legal.js"></script><script>if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js");</script></body></html>
